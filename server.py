@@ -13,6 +13,7 @@ import socket
 import logging
 import tornado.ioloop
 import tornado.netutil
+import io
 from urllib.parse import urlparse, urlunparse
 from collections import OrderedDict
 
@@ -95,6 +96,19 @@ class Connector:
     def __str__(self):
         return '%s(netloc=%s, path=%s)' % (self.__class__.__name__, repr(self.netloc), repr(self.path))
 
+class RejectConnector(Connector):
+    @classmethod
+    def accept(cls, scheme):
+        return scheme == 'reject'
+
+    def connect(self, host, port, callback):
+        ios = io.BytesIO()
+        def returnnow(a,b):
+            a(b'HTTP/1.1 410 Gone\r\n\r\n')
+            a(b'')
+            return
+        ios.read_until_close = returnnow
+        callback(ios)
 
 class DirectConnector(Connector):
 
@@ -260,7 +274,7 @@ class ProxyHandler:
 
     def on_connect_connected(self, outgoing):
         if outgoing:
-            self.incoming.write(b'HTTP/1.0 200 Connection Established\r\n\r\n')
+            self.incoming.write(b'HTTP/1.1 200 Connection Established\r\n\r\n')
             pipe(self.incoming, outgoing)
         else:
             self.incoming.close()
