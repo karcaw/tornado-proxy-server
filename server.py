@@ -46,7 +46,13 @@ def netloc_parser(netloc, default_port = -1):
 def write_to(stream):
     def on_data(data):
         if data == b'':
-            stream.close()
+            #print('stream.close')
+            try:
+                stream.nullreads+=1
+            except:
+                stream.nullreads=1
+            if stream.nullreads==4:
+                stream.close()
         else:
             if not stream.closed():
                 stream.write(data)
